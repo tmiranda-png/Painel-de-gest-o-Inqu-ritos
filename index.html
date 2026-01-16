@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Gestão - 3ª Promotoria</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -11,6 +12,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <script>
+       // Configuração do Firebase
        window.__firebase_config = JSON.stringify({
             apiKey: "AIzaSyAzad4DmO5ZyKBgMSpjsivd6c0_VJ6LwvY",
             authDomain: "painel-promotoria.firebaseapp.com",
@@ -21,23 +23,35 @@
             measurementId: "G-36RC8TJSRC"
         });
 
+        // MANTENDO O ID ORIGINAL PARA NÃO PERDER DADOS
         window.__app_id = 'promotoria-gestao-v1'; 
     </script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
         .kanban-column { min-width: 350px; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        #error-display { display: none; padding: 20px; background: #fee2e2; color: #991b1b; font-weight: bold; position: fixed; top: 0; left: 0; right: 0; z-index: 9999; border-bottom: 2px solid #ef4444; }
     </style>
 </head>
 <body class="bg-[#f8fafc]">
+    <div id="error-display"></div>
     <div id="root"></div>
 
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            const display = document.getElementById('error-display');
+            display.style.display = 'block';
+            display.innerHTML = `⚠️ OCORREU UM ERRO:<br/>${message}<br/>Linha: ${lineno}`;
+        };
+    </script>
+
     <script type="text/babel" data-type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         const { useState, useEffect, useRef } = React;
 
@@ -51,6 +65,8 @@
             db = getFirestore(app);
         } catch (error) {
             console.error("Erro Firebase:", error);
+            document.getElementById('error-display').style.display = 'block';
+            document.getElementById('error-display').innerText = "Erro ao iniciar Firebase: " + error.message;
         }
 
         const AREAS = [
@@ -392,4 +408,90 @@
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-[6px] p-6" onClick={() => setIsModalOpen(false)}>
                             <div className="bg-white rounded-[4rem] w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in duration-300 border border-white/20" onClick={e => e.stopPropagation()}>
                                 <div className="px-14 py-10 bg-slate-50 border-b flex justify-between items-center">
-                                    <div><h2 className="text-2xl font-black uppercase text-slate-9
+                                    <div><h2 className="text-2xl font-black uppercase text-slate-900">{editingInquerito ? 'Editar' : 'Novo'}</h2></div>
+                                    <button onClick={() => setIsModalOpen(false)} className="text-slate-300 hover:text-slate-900 transition-all p-3 hover:bg-slate-100 rounded-full"><Icon name="X" className="w-10 h-10" /></button>
+                                </div>
+                                <form onSubmit={handleSave} className="p-14 flex flex-col gap-8">
+                                    <div className="space-y-2"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-5">Nº Processo</label><input name="numero" required defaultValue={editingInquerito?.numero} className="w-full px-10 py-6 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] outline-none focus:border-indigo-500 font-mono text-xl shadow-inner" placeholder="0000000-00.2025.8.16.0083" /></div>
+                                    <div className="space-y-2"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-5">Data Movimentação</label><input type="date" name="date" required defaultValue={editingInquerito ? new Date(editingInquerito.lastRenewal).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]} className="w-full px-10 py-6 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] outline-none focus:border-indigo-500 font-bold text-slate-700 shadow-inner" /></div>
+                                    
+                                    <div className="space-y-2">
+                                        <label className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.4em] ml-5 flex items-center gap-2"><Icon name="UserCheck" className="w-4 h-4" /> Delegar para Responsável</label>
+                                        <input name="responsavel" defaultValue={editingInquerito?.responsavel} className="w-full px-10 py-6 bg-indigo-50/50 border-2 border-indigo-100 rounded-[2.5rem] outline-none focus:border-indigo-500 font-bold text-slate-700 shadow-inner placeholder-indigo-300" placeholder="Nome do responsável (opcional)" />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-8">
+                                        <div className="space-y-2"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-5">Área</label><select name="area" defaultValue={editingInquerito?.area || activeArea} className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] outline-none focus:border-indigo-500 font-bold text-slate-700 appearance-none shadow-sm cursor-pointer">{AREAS.filter(a => a.id !== 'delegacao').map(a => <option key={a.id} value={a.id}>{a.label}</option>)}</select></div>
+                                        <div className="space-y-2"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-5">Status</label><select name="status" defaultValue={editingInquerito?.status || STATUS_OPTIONS[0]} className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] outline-none focus:border-indigo-500 font-bold text-slate-700 appearance-none shadow-sm cursor-pointer">{STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                                    </div>
+                                    <div className="space-y-2"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-5">Notas</label><textarea name="obs" rows="3" defaultValue={editingInquerito?.observacoes} className="w-full px-10 py-7 bg-slate-50 border-2 border-slate-100 rounded-[2.5rem] outline-none focus:border-indigo-500 resize-none text-sm font-medium shadow-inner" placeholder="Diligências..." /></div>
+                                    <div className="flex gap-6 pt-4"><button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-6 border-2 border-slate-100 rounded-[2.5rem] text-[13px] font-black text-slate-400 hover:bg-slate-50 uppercase tracking-[0.3em]">Cancelar</button><button type="submit" className="flex-2 bg-indigo-600 text-white py-6 rounded-[2.5rem] text-[13px] font-black uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-700 active:scale-95">Salvar</button></div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {isUploadModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-[6px] p-6" onClick={() => setIsUploadModalOpen(false)}>
+                            <div className="bg-white rounded-[3rem] w-full max-w-lg p-10 text-center shadow-2xl animate-in zoom-in" onClick={e => e.stopPropagation()}>
+                                <div className="mb-6"><div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto"><Icon name="UploadCloud" className="w-10 h-10 text-emerald-600" /></div></div>
+                                <h2 className="text-xl font-black uppercase text-slate-900 mb-2">Importar Dados</h2>
+                                <p className="text-sm text-slate-500 mb-8 px-8">Arraste um arquivo <b>.csv</b> aqui. <br/>Formato (separado por ponto e vírgula):<br/><code className="bg-slate-100 px-2 py-1 rounded text-xs mt-2 block">Número; Status; Observações</code></p>
+                                
+                                <div className="border-4 border-dashed border-slate-200 rounded-[2rem] p-10 hover:bg-slate-50 transition-all relative">
+                                    <input type="file" accept=".csv" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                    <span className="text-sm font-bold text-slate-400">Clique ou Arraste o arquivo aqui</span>
+                                </div>
+                                <button onClick={() => setIsUploadModalOpen(false)} className="mt-8 text-slate-400 font-bold text-xs uppercase hover:text-slate-600">Cancelar</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {isTeamModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-[6px] p-6" onClick={() => setIsTeamModalOpen(false)}>
+                            <div className="bg-white rounded-[3rem] w-full max-w-lg p-10 shadow-2xl animate-in zoom-in" onClick={e => e.stopPropagation()}>
+                                <h2 className="text-xl font-black uppercase text-slate-900 mb-6 flex items-center gap-3"><Icon name="Users" className="w-6 h-6" /> Gestão de Acesso</h2>
+                                
+                                <form onSubmit={handleAddUser} className="flex gap-3 mb-8">
+                                    <input name="email" type="email" placeholder="Novo e-mail..." className="flex-1 bg-slate-50 border border-slate-200 px-5 py-3 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500" required />
+                                    <button className="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold text-xs hover:bg-indigo-700 transition-all">ADICIONAR</button>
+                                </form>
+
+                                <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
+                                    {authorizedUsers.map(email => (
+                                        <div key={email} className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                            <span className="text-sm font-bold text-slate-600">{email}</span>
+                                            {email !== user.email && (
+                                                <button onClick={() => handleRemoveUser(email)} className="text-red-400 hover:text-red-600"><Icon name="Trash" className="w-4 h-4" /></button>
+                                            )}
+                                            {email === user.email && <span className="text-[10px] font-black text-indigo-400 uppercase">Você</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                                <button onClick={() => setIsTeamModalOpen(false)} className="mt-8 w-full py-4 bg-slate-100 rounded-2xl text-slate-500 font-bold text-xs uppercase hover:bg-slate-200">Fechar</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {notification && <div className="fixed bottom-32 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-12 py-6 rounded-[3rem] shadow-2xl flex items-center gap-5 animate-in slide-in-from-bottom-16 z-50 border border-white/10"><Icon name="CheckCircle" className="text-emerald-500 w-6 h-6" /><span className="text-sm font-black uppercase tracking-[0.25em]">{notification}</span></div>}
+
+                    <footer className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-2xl border-t px-14 py-6 flex justify-between items-center z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
+                        <div className="flex gap-12 text-[12px] font-black text-slate-400 uppercase tracking-[0.25em]">
+                            <div className="flex items-center gap-4"><div className="w-4 h-4 rounded-full bg-emerald-500 shadow-lg"></div> Regular</div>
+                            <div className="flex items-center gap-4"><div className="w-4 h-4 rounded-full bg-amber-500 shadow-lg"></div> Prazo {'<'} 20d</div>
+                            <div className="flex items-center gap-4"><div className="w-4 h-4 rounded-full bg-red-500 shadow-lg animate-pulse"></div> Urgente (10d)</div>
+                            <div className="flex items-center gap-4"><div className="w-4 h-4 rounded-full bg-purple-500 shadow-lg"></div> Correção</div>
+                        </div>
+                        <div className="bg-indigo-600/5 px-10 py-3.5 rounded-full text-[11px] font-black text-indigo-500 uppercase tracking-[0.35em] border border-indigo-100 shadow-sm flex items-center gap-4">
+                            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping"></div> {user.email}
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
